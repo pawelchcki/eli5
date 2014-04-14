@@ -1,13 +1,11 @@
-import Queue as queue
 import csv
+import common
 
-data_queue = queue.Queue()
-chunk_size = 100
-
-class CSVFileProducer:	
+class CSVFileProducer(common.QueueProcessor):	
 	delimiter = ','
 	quotechar = '"'
 	batch_size = 100
+	timeout = 60
 	def __init__(self, filepath):
 		self.init_source(filepath)
 
@@ -37,15 +35,6 @@ class CSVFileProducer:
 		if len(batch) > 0:
 			yield batch
 
-	def launch(self, data_queue):
-		if data_queue:
-			for batch in self.batch_process_input(self.batch_size):			
-				data_queue.put(batch)			
-			
-
-c = CSVFileProducer('./sample.csv')
-# print c.head_row
-q = queue.Queue()
-c.launch(q)
-print q.get()[0]
-
+	def process(self, data_queue):
+		for batch in self.batch_process_input(self.batch_size):			
+			data_queue.put(batch, True, self.timeout)			
