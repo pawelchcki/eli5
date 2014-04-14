@@ -6,7 +6,7 @@ import common
 class ElasticConsumer(common.QueueProcessor):	
 	shard_count = 3
 	replica_count = 1
-	timeout=10
+	timeout = 5
 	def __init__(self, index_name, doc_type = 'test', host = 'localhost', port = 9200):
 		self.es = Elasticsearch([
 		    {'host': host, 'port': port},
@@ -32,5 +32,5 @@ class ElasticConsumer(common.QueueProcessor):
 			batch = data_queue.get(True, self.timeout)
 			dressed_batch = map(lambda body: {'_index': self.index_name, '_type': self.doc_type, '_source': body}, batch)			
 			elhelpers.bulk(self.es, dressed_batch)	
-			print dressed_batch		
+			# print dressed_batch		
 

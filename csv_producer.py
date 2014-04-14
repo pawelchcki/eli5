@@ -1,5 +1,7 @@
-import csv
+import csv, sys
 import common
+
+csv.field_size_limit(sys.maxsize)
 
 class CSVFileProducer(common.QueueProcessor):	
 	delimiter = ','
@@ -10,8 +12,11 @@ class CSVFileProducer(common.QueueProcessor):
 		self.init_source(filepath)
 
 	def init_source(self, filepath):
-		self.source_file = open(filepath, 'r')
-		self.csv_reader = csv.reader(self.source_file,
+		source_file = open(filepath, 'r')
+		self.init_csv(source_file)
+
+	def init_csv(self, source):
+		self.csv_reader = csv.reader(source,
 		 delimiter=self.delimiter, quotechar=self.quotechar)
 		self.head_row = self.csv_reader.next()
 
@@ -38,3 +43,7 @@ class CSVFileProducer(common.QueueProcessor):
 	def process(self, data_queue):
 		for batch in self.batch_process_input(self.batch_size):			
 			data_queue.put(batch, True, self.timeout)			
+
+class CSVStreamProducer(CSVFileProducer):
+	def init_source(self, in_file):
+		self.init_csv(iter(in_file.readline, '')) 
