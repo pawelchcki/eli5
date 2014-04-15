@@ -7,7 +7,7 @@ class CSVFileProducer(common.QueueProcessor):
 	delimiter = ','
 	quotechar = '"'
 	batch_size = 100
-	timeout = 60
+	timeout = 1024
 	def __init__(self, filepath):
 		self.init_source(filepath)
 

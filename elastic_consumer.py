@@ -1,12 +1,13 @@
+import __future__
+
 from elasticsearch import Elasticsearch
 from  elasticsearch import helpers as elhelpers
-import json
-import common
+import common, time
 
 class ElasticConsumer(common.QueueProcessor):	
 	shard_count = 3
 	replica_count = 1
-	timeout = 5
+	timeout = 1024
 	def __init__(self, index_name, doc_type = 'test', host = 'localhost', port = 9200):
 		self.es = Elasticsearch([
 		    {'host': host, 'port': port},
@@ -27,10 +28,23 @@ class ElasticConsumer(common.QueueProcessor):
 		}
 		self.es.indices.create(self.index_name, {'settings': settings, 'mappings': self.mapping})
 
+	def send_batch(self, batch, max_tries = 10):
+		dressed_batch = map(lambda body: {'_index': self.index_name, '_type': self.doc_type, '_source': body}, batch)
+		tried = 0
+		while tried < max_tries:
+			try:
+				elhelpers.bulk(self.es, dressed_batch)
+				break
+			except ConnectionError as e:
+				print(e)
+				wait_time = 2**tried
+				tried += 1
+				print("Waiting %ss before retrying request" % tried)
+				time.sleep(wait_time)
+
+
 	def process(self, data_queue):		
 		while True:
 			batch = data_queue.get(True, self.timeout)
-			dressed_batch = map(lambda body: {'_index': self.index_name, '_type': self.doc_type, '_source': body}, batch)			
-			elhelpers.bulk(self.es, dressed_batch)	
-			# print dressed_batch		
+			self.send_batch(batch)
 
