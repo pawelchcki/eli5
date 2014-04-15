@@ -1,8 +1,9 @@
 import __future__
 
 from elasticsearch import Elasticsearch
+from elasticsearch.exceptions import ConnectionError
 from  elasticsearch import helpers as elhelpers
-import common, time
+import common, time, json
 
 class ElasticConsumer(common.QueueProcessor):	
 	shard_count = 3
@@ -41,7 +42,6 @@ class ElasticConsumer(common.QueueProcessor):
 				tried += 1
 				print("Waiting %ss before retrying request" % tried)
 				time.sleep(wait_time)
-
 
 	def process(self, data_queue):		
 		while True:
