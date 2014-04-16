@@ -41,8 +41,11 @@ class CSVFileProducer(common.QueueProcessor):
 			yield batch
 
 	def process(self, data_queue):
-		for batch in self.batch_process_input(self.batch_size):			
-			data_queue.put(batch, True, self.timeout)			
+		for batch in self.batch_process_input(self.batch_size):
+			self.stop_work()	
+			data_queue.put(batch, True, self.timeout)
+			self.start_work()
+		self.stop_work()			
 
 class CSVStreamProducer(CSVFileProducer):
 	def init_source(self, in_file):
