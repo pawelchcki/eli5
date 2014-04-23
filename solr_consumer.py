@@ -66,12 +66,14 @@ class SolrConsumer(common.QueueProcessor):
                 self.solr.commit()
                 break
             except solr.SolrException as e:
+                print "EXCEPTION !!!!"
                 print(e)
                 wait_time = 2 ** tried
                 tried += 1
                 print("Waiting %ss before retrying request" % wait_time)
                 time.sleep(wait_time)
             except Exception as e:
+                print "EXC!!"
                 print(e)
                 tried += 1
                 time.sleep(10)
