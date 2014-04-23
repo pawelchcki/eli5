@@ -1,5 +1,6 @@
 import csv, sys
 import common
+from itertools import izip, ifilter, imap
 
 csv.field_size_limit(sys.maxsize)
 
@@ -26,9 +27,11 @@ class CSVFileProducer(common.QueueProcessor):
         self.head_row = self.csv_reader.next()
 
     def parse_row(self, row):
-        dict = {}
-        map(lambda k, v: dict.update({k: str(v).decode('utf-8')}) if v != '' else None, self.head_row, row)
-        return dict
+        utf8_row = imap(lambda item: item.decode('utf-8'),row)
+        not_filtered = izip(self.head_row, utf8_row)
+
+        # print dict(ifilter(lambda pair: pair[0] != "_version_", not_filtered))
+        return dict(ifilter(lambda pair: pair[0] != "_version_" and len(pair[1]) > 0, not_filtered))
 
     def process_input(self):
         for row in self.csv_reader:
