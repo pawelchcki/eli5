@@ -27,7 +27,7 @@ class CSVFileProducer(common.QueueProcessor):
 
     def parse_row(self, row):
         dict = {}
-        map(lambda k, v: dict.update({k: v}) if v != '' else None, self.head_row, row)
+        map(lambda k, v: dict.update({k: str(v).decode('utf-8')}) if v != '' else None, self.head_row, row)
         return dict
 
     def process_input(self):
