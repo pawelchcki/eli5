@@ -1,46 +1,31 @@
 import __future__
 
-from elasticsearch import Elasticsearch
-from elasticsearch.exceptions import ConnectionError
-from  elasticsearch import helpers as elhelpers
 import common, time, json, sys
+import random
 import datetime as dt
+import solr
 
 
-class ElasticConsumer(common.QueueProcessor):
+class SolrConsumer(common.QueueProcessor):
     shard_count = 3
     replica_count = 1
     timeout = 1024
+    url = 'http://%s:%i/solr/%s'
 
-    def __init__(self, index_name, doc_type='test', host='localhost', port=9200):
-        self.es = Elasticsearch([
-            {'host': host, 'port': port},
-        ])
+    def __init__(self, index_name, doc_type='test', host='dev-search-s4', port=8983):
+        self.solr = solr.SolrConnection(self.url % (host, port, index_name), )
         self.heartbeat_state = 0
         self.last_status = dt.datetime.now()
         self.total_docs = 0
         self.index_name = index_name
         self.doc_type = doc_type
 
-    def create_index(self, mapping=None):
-        if not mapping:
-            mapping_file = file('./mapping.json', 'r')
-            # print mapping_file.read()
-            mapping = json.load(mapping_file)
-        self.mapping = mapping
-        settings = {
-        'number_of_shards': self.shard_count,
-        'number_of_replicas': self.replica_count
-        }
-        self.es.indices.create(self.index_name, {'settings': settings, 'mappings': self.mapping})
-
     def visual_heartbeat(self, batch):
         now = dt.datetime.now()
         self.total_docs += len(batch)
         if (now - self.last_status).seconds > 2:
             self.last_status = now
-            print
-            self.total_docs
+            print self.total_docs
 
         if self.heartbeat_state == 0:
             sys.stdout.write('|')
@@ -59,17 +44,28 @@ class ElasticConsumer(common.QueueProcessor):
         else:
             self.heartbeat_state = 1
 
+    def randomize_batch(self, batch):
+        for doc in batch:
+            doc['id'] = "%i_%i_%i" % (random.randint(0, 100000), random.randint(0, 1000000), random.randint(0, 1000000))
+            arr = doc['html_' + doc['lang']].split(" ")
+            random.shuffle(arr)
+            doc['html_' + doc['lang']] = " ".join(arr)
+            arr = doc['nolang_txt'].split(" ")
+            random.shuffle(arr)
+            doc['nolang_txt'] = " ".join(arr)
+
+        return batch
 
     def send_batch(self, batch, max_tries=10):
-        dressed_batch = map(lambda body: {'_index': self.index_name, '_type': self.doc_type, '_source': body}, batch)
+        batch = self.randomize_batch(batch)
         tried = 0
-
         while tried < max_tries:
             try:
                 self.visual_heartbeat(batch)
-                elhelpers.bulk(self.es, dressed_batch)
+                self.solr.add_many(batch)
+                self.solr.commit()
                 break
-            except ConnectionError as e:
+            except solr.SolrException as e:
                 print(e)
                 wait_time = 2 ** tried
                 tried += 1
