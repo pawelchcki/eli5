@@ -46,6 +46,9 @@ class SolrConsumer(common.QueueProcessor):
 
     def randomize_batch(self, batch):
         for doc in batch:
+            if not 'html_'+doc['lang'] in doc:
+                continue
+
             doc['id'] = "%i_%i_%i" % (random.randint(0, 100000), random.randint(0, 1000000), random.randint(0, 1000000))
             arr = doc['html_' + doc['lang']].split(" ")
             random.shuffle(arr)
