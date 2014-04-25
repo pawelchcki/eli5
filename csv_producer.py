@@ -8,15 +8,15 @@ csv.field_size_limit(sys.maxsize)
 class CSVFileProducer(common.QueueProcessor):
     delimiter = ','
     quotechar = '"'
-    batch_size = 100
     timeout = 1024
 
 
-    def __init__(self, filepath, limit=0, offset=0):
+    def __init__(self, filepath, limit=0, offset=0, batch_size=100):
         self.init_source(filepath)
         self.processed = 0
         self.limit = limit
         self.offset = offset
+        self.batch_size = batch_size
 
     def init_source(self, filepath):
         source_file = open(filepath, 'r')
@@ -48,7 +48,7 @@ class CSVFileProducer(common.QueueProcessor):
         batch = []
         for row in self.process_input():
             batch.append(row)
-            if len(batch) > batch_size:
+            if len(batch) >= int(batch_size):
                 yield batch
                 batch = []
 
